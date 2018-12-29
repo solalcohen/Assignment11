@@ -129,20 +129,16 @@ def categories():
     price = request.forms.get('price')
     img_url = request.forms.get('img_url')
     favorite = request.forms.get('favorite')
-    id=request.forms.get('id')
+    id = request.forms.get('id')
     if favorite == 'on':
         real_favorite = True
     else:
         real_favorite = False
-    id = request.forms.get('id')
     try:
         with connection.cursor() as cursor:
-            sql = 'SELECT id FROM categories'
+            sql = 'SELECT id FROM product'
             cursor.execute(sql)
-            entries = cursor.fetchall()
-            entries_list = [r['id'] for r in entries]
-            print(category_list)
-            if (category_list is None) or (int(category_list) not in entries_list):
+            if (category_list is None):
                 result['STATUS'] = 'ERROR'
                 result['MSG'] = 'category not found'
                 result['CODE'] = 404
@@ -150,14 +146,18 @@ def categories():
                 result['STATUS'] = 'ERROR'
                 result['MSG'] = 'missing parameters'
                 result['CODE'] = 400
-            else:
-                sql2 = "DELETE FROM product WHERE id='{}'".format(id)
+            elif id == '':
+                sql2 = "INSERT INTO product (title, descr, price, img_url, category, favorite) VALUES ('{0}','{1}',{2},'{3}',{4},{5})".format(
+                    title, desc, price, img_url, category_list, real_favorite)
                 cursor.execute(sql2)
                 connection.commit()
-                sql3 = "INSERT INTO product (title, descr, price, img_url, category, favorite) VALUES ('{0}','{1}',{2},'{3}',{4},{5})".format(
-                    title, desc, price, img_url, category_list, real_favorite)
+                result['PRODUCT_ID'] = cursor.lastrowid
+                result['STATUS'] = 'SUCCESS'
+                result['CODE'] = 201
+            else:
+                sql3 = "UPDATE product SET title='{0}',descr='{1}',price={2},img_url='{3}', category={4},favorite={5} WHERE id={6}".format(
+                    title, desc, price, img_url, category_list, real_favorite, id)
                 cursor.execute(sql3)
-                cursor.fetchall()
                 connection.commit()
                 result['PRODUCT_ID'] = cursor.lastrowid
                 result['STATUS'] = 'SUCCESS'
@@ -171,7 +171,6 @@ def categories():
         return json.dumps(result)
 
 
-# MARCHE SAUF SI ON VEUT UPDATE
 @get('/product/<id>')
 def get_product(id):
     result = {}
@@ -229,7 +228,6 @@ def delete_product(id):
         return json.dumps(result)
 
 
-# OK POUR GET PRODUIT DANS MANAGE PRODUCT
 @get('/products')
 def get_products():
     result = {}
@@ -249,7 +247,6 @@ def get_products():
         return json.dumps(result)
 
 
-# //ok POUR GET LISTE PRODUITS DANS LE CLIENT SIDE
 @get('/category/<id>/products')
 def get_listproducts(id):
     result = {}
